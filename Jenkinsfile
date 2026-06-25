@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME = 'php-demoapp'
-        VERSION = "${BUILD_NUMBER}"
-        NEXUS_URL = 'http://host.docker.internal:8082'
+        APP_NAME   = 'php-demoapp'
+        VERSION    = "${BUILD_NUMBER}"
+        NEXUS_URL  = 'http://localhost:8082'
         NEXUS_REPO = 'php-artifacts'
     }
 
@@ -12,7 +12,7 @@ pipeline {
         stage('PHP Syntax Check') {
             steps {
                 sh '''
-                find . -name "*.php" -print0 | xargs -0 -n1 php -l
+                    find . -name "*.php" -print0 | xargs -0 -n1 php -l
                 '''
             }
         }
@@ -20,10 +20,13 @@ pipeline {
         stage('Package App') {
             steps {
                 sh '''
-                rm -rf build
-                mkdir -p build
-                zip -r build/${APP_NAME}-${VERSION}.zip . \
-                  -x "*.git*" "build/*" ".env"
+                    rm -rf build
+                    mkdir -p build
+
+                    zip -r build/${APP_NAME}-${VERSION}.zip . \
+                      -x "*.git*" "build/*" ".env"
+
+                    ls -lh build/
                 '''
             }
         }
@@ -36,9 +39,9 @@ pipeline {
                     passwordVariable: 'NEXUS_PASS'
                 )]) {
                     sh '''
-                    curl -u "$NEXUS_USER:$NEXUS_PASS" \
-                      --upload-file build/${APP_NAME}-${VERSION}.zip \
-                      ${NEXUS_URL}/repository/${NEXUS_REPO}/${APP_NAME}-${VERSION}.zip
+                        curl -f -v -u "$NEXUS_USER:$NEXUS_PASS" \
+                          --upload-file build/${APP_NAME}-${VERSION}.zip \
+                          ${NEXUS_URL}/repository/${NEXUS_REPO}/${APP_NAME}-${VERSION}.zip
                     '''
                 }
             }
