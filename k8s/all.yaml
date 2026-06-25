@@ -1,0 +1,113 @@
+# =========================
+# MYSQL SECRET
+# =========================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: root
+  MYSQL_DATABASE: onlinecourse
+
+---
+# =========================
+# MYSQL DEPLOYMENT
+# =========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: localhost:8083/php-demoapp-mysql:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_DATABASE
+
+---
+# =========================
+# MYSQL SERVICE
+# =========================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+
+---
+# =========================
+# PHP APP DEPLOYMENT
+# =========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-demoapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: php-demoapp
+  template:
+    metadata:
+      labels:
+        app: php-demoapp
+    spec:
+      containers:
+        - name: php-demoapp
+          image: localhost:8083/php-demoapp:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          env:
+            - name: DB_HOST
+              value: mysql-service
+            - name: DB_USER
+              value: root
+            - name: DB_PASS
+              value: root
+            - name: DB_NAME
+              value: onlinecourse
+
+---
+# =========================
+# PHP APP SERVICE
+# =========================
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-demoapp-service
+spec:
+  type: NodePort
+  selector:
+    app: php-demoapp
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
